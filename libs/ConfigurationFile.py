@@ -53,3 +53,8 @@ class ConfigurationFile:
 		for vault in self.data['configuration']['vaults']:
 			if vault_name in vault['names']:
 				self.data['configuration']['default-vault'] = vault_name
+
+	def set_vault_path(self, vault_name: str, new_path: str) -> None:
+		for vault in self.data['configuration']['vaults']:
+			if vault_name in vault['names']:
+				vault['path'] = new_path
