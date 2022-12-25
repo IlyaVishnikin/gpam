@@ -41,7 +41,7 @@ class ConfigurationFile:
 
 	def add_vault_alias(self, vault_name: str, alias_name: str) -> None:
 		for vault in self.data['configuration']['vaults']:
-			if vault_name in vault['names']:
+			if vault_name in vault['names'] and alias_name not in vault['names']:
 				vault['names'].append(alias_name)
 
 	def add_vault_master_key(self, vault_name: str, master_key: str) -> None:
