@@ -15,8 +15,9 @@ def new(): ...
 @new.command(help="Add and initialize the new vault item")
 @click.option("-n", "--name", prompt="Vault name", type=str, help="New name of the vault")
 @click.option("-p", "--path", type=click.Path(exists=False, dir_okay=False, writable=True, readable=True), help="Path to the vault")
+@click.option("-k", "--key", type=str, default="", help="Master key")
 @click.option("--verbose/--no-verbose", type=bool, default=False, help="Verbose output")
-def vault(name: str, path: str, verbose: bool):
+def vault(name: str, path: str, key: str, verbose: bool):
 	path = abspath(expanduser(path)) if path else join(GPAM_DIRECTORY_LOCATION, f"vault.{name}.json")
 	
 	vault_file = VaultFile(path)
@@ -25,7 +26,7 @@ def vault(name: str, path: str, verbose: bool):
 	configuration_file = ConfigurationFile(GPAM_CONFIGURATION_FILE_LOCATION)
 	if verbose: print(f"GPAM: Initialize configuration file: {GPAM_CONFIGURATION_FILE_LOCATION}.")
 
-	configuration_file.add_vault(name, path)
+	configuration_file.add_vault(name, path, key)
 	if verbose: print(f"GPAM: Adding the new vault({name}:{path}) to the configuration file.")
 
 	vault_file.save()
@@ -106,7 +107,7 @@ def record(vault: str,
 	all_fields['login'] = login
 	all_fields['site'] = site
 	all_fields['password'] = password
-	all_fields['encrypted'] = encrypt and configuration_file.get_master_key(vault)
+	all_fields['encrypted'] = bool(encrypt and configuration_file.get_master_key(vault))
 
 	if all_fields['encrypted']:
 		all_fields['password'] = aes_encrypt(all_fields['password'], configuration_file.get_master_key(vault))
