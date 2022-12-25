@@ -30,16 +30,22 @@ class ConfigurationFile:
 
 	def add_vault(self, vault_name: str, vault_path) -> None:
 		for vault in self.data['configuration']['vaults']:
-			if (vault_name in vault['names']):
+			if vault_name in vault['names']:
 				return
 
 		self.data['configuration']['vaults'].append({
 			"names": [vault_name],
-			"master-key": False,
+			"master-key": "",
 			"path": vault_path
 		})
 
 	def add_vault_alias(self, vault_name: str, alias_name: str) -> None:
 		for vault in self.data['configuration']['vaults']:
-			if (vault_name in vault['names']):
+			if vault_name in vault['names']:
 				vault['names'].append(alias_name)
+
+	def add_vault_master_key(self, vault_name: str, master_key: str) -> None:
+		for vault in self.data['configuration']['vaults']:
+			if vault_name in vault['names']:
+				vault['master-key'] = master_key
+
