@@ -28,7 +28,7 @@ class ConfigurationFile:
 		with open(self.path, "w") as f:
 			json.dump(self.data, f, indent=4)
 
-	def add_vault(self, vault_name: str, vault_path: str) -> None:
+	def add_vault(self, vault_name: str, vault_path: str, master_key="") -> None:
 		"""
 		Add a new vault to the configuration file.
 		If vault with same name already exists than nothing happends
@@ -40,7 +40,7 @@ class ConfigurationFile:
 
 		self.data['configuration']['vaults'].append({
 			"names": [vault_name],
-			"master-key": "",
+			"master-key": master_key,
 			"path": vault_path
 		})
 		self.set_default_vault(vault_name)
