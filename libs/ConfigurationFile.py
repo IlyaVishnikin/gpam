@@ -36,5 +36,5 @@ class ConfigurationFile:
 		self.data['configuration']['vaults'].append({
 			"names": [vault_name],
 			"master-key": False,
-			"vault-path": vault_path
+			"path": vault_path
 		})
