@@ -11,7 +11,7 @@ class ConfigurationFile:
 			with open(self.path, "r") as f:
 				self.data = json.load(f)
 
-		except json.JSONDecodeError: # recreating configuration file
+		except (json.JSONDecodeError, FileNotFoundError): # recreating configuration file
 			configuration_structure = {
 				"configuration": {
 					"default-vault": "",
@@ -19,7 +19,7 @@ class ConfigurationFile:
 					]
 				}
 			}
-			with open(self.path, "w") as f:
+			with open(self.path, "w+") as f:
 				json.dump(configuration_structure, f, indent=4)
 			with open(self.path, "r") as f:
 				self.data = json.load(f)
