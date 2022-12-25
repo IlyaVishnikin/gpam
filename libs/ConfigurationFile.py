@@ -70,3 +70,9 @@ class ConfigurationFile:
 		for vault in self.data["configuration"]["vaults"]:
 			all_fields.append(vault['names'][0])
 		return all_fields
+
+	def get_vault_path(self, vault_name: str) -> str:
+		for vault in self.data["configuration"]["vaults"]:
+			if vault_name in vault["names"]:
+				return vault["path"]
+		return ""
