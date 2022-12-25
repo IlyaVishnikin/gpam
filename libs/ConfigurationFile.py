@@ -76,3 +76,8 @@ class ConfigurationFile:
 			if vault_name in vault["names"]:
 				return vault["path"]
 		return ""
+
+	def get_master_key(self, vault_name: str) -> str:
+		for vault in self.data["configuration"]["vaults"]:
+			if vault_name in vault["names"]:
+				return vault["master-key"]
