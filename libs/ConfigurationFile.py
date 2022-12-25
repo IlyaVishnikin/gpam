@@ -49,3 +49,7 @@ class ConfigurationFile:
 			if vault_name in vault['names']:
 				vault['master-key'] = master_key
 
+	def set_default_vault(self, vault_name: str) -> None:
+		for vault in self.data['configuration']['vaults']:
+			if vault_name in vault['names']:
+				self.data['configuration']['default-vault'] = vault_name
