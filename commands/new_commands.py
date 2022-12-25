@@ -117,7 +117,3 @@ def record(vault: str,
 
 	vault_file.save()
 	configuration_file.save()
-
-
-
-new.add_command(vault)
