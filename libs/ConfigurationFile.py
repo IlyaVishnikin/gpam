@@ -29,11 +29,6 @@ class ConfigurationFile:
 			json.dump(self.data, f, indent=4)
 
 	def add_vault(self, vault_name: str, vault_path: str, master_key="") -> None:
-		"""
-		Add a new vault to the configuration file.
-		If vault with same name already exists than nothing happends
-		Otherwise, new vault has been added and setted as default vault
-		"""
 		for vault in self.data['configuration']['vaults']:
 			if vault_name in vault['names']:
 				return
@@ -67,7 +62,6 @@ class ConfigurationFile:
 		for vault in self.data["configuration"]["vaults"]:
 			all_fields.append(vault['names'][0])
 		return all_fields
-
 
 	def get_vault_path(self, vault_name: str) -> str:
 		for vault in self.data["configuration"]["vaults"]:
