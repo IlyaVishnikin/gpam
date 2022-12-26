@@ -1,13 +1,11 @@
 import click
 
-from argon2 import PasswordHasher
 from pwinput import pwinput
 from os.path import expanduser, join, abspath
 
 from config 				import GPAM_DIRECTORY_LOCATION, GPAM_CONFIGURATION_FILE_LOCATION
 from libs.ConfigurationFile import ConfigurationFile
 from libs.VaultFile 		import VaultFile
-from libs.crypto			import aes_encrypt
 
 @click.group(help="Add new vaults and records")
 def new(): ...
@@ -91,3 +89,4 @@ def record(vault: str, site: str, login: str, password: str, field: [str, str], 
 
 	vault_file.save()
 	configuration_file.save()
+
