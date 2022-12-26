@@ -87,13 +87,12 @@ def record(vault: str, site: str, login: str, password: str, field: [str, str], 
 
 
 	vault_file = VaultFile(configuration_file.get_vault_path(vault))
-	if vault_file.data["master-key"]:
-		master_key = master_key if master_key else pwinput("Enter master key: ")
-		if not vault_file.verify_master_key(master_key):
-			click.echo(f"GPAM: {click.style('Master key confirmation failed', fg='red')}.")
-			return
 
-	vault_file.add_fields(master_key, **all_fields)
+	try:
+		vault_file.add_fields(master_key, **all_fields)
+	except:
+		click.echo(f"GPAM: {click.style('Master key confirmation failed', fg='red')}.")
+		return
 
 	vault_file.save()
 	configuration_file.save()
