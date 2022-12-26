@@ -51,8 +51,9 @@ def alias(name: str, alias: str):
 @click.option("-l", "--login", type=str, help="Login [-f login LOGIN]")
 @click.option("-p", "--password", type=str, hide_input=True, confirmation_prompt=True, help="Password [-f password PASSWORD]")
 @click.option("-f", "--field", type=click.Tuple([str, str]), multiple=True, help="General purpose field")
+@click.option("-m", "--master-key", type=str, help="Master key")
 @click.option("-i", "--interactive", is_flag=True, type=bool, default=False, help="Interactive input for general purpose fields")
-def record(vault: str, site: str, login: str, password: str, field: [str, str], interactive: bool) -> None:
+def record(vault: str, site: str, login: str, password: str, field: [str, str], master_key: str, interactive: bool) -> None:
 
 	configuration_file = ConfigurationFile(GPAM_CONFIGURATION_FILE_LOCATION)
 
@@ -84,8 +85,16 @@ def record(vault: str, site: str, login: str, password: str, field: [str, str], 
 	all_fields['site'] = site
 	all_fields['password'] = password
 
+
 	vault_file = VaultFile(configuration_file.get_vault_path(vault))
-	vault_file.add_fields(**all_fields)
+	master_key = ""
+	if vault_file.data["master-key"]:
+		master_key = master_key if master_key else pwinput("Enter master key: ")
+		if not vault_file.verify_master_key(master_key):
+			click.echo(f"GPAM: {click.style('Master key confirmation failed', fg='red')}.")
+			return
+
+	vault_file.add_fields(master_key, **all_fields)
 
 	vault_file.save()
 	configuration_file.save()
