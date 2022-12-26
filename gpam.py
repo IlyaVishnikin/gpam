@@ -6,7 +6,6 @@ from os.path import exists
 from config 				import GPAM_DIRECTORY_LOCATION
 from commands.new_commands  import new
 
-
 @click.group()
 def gpam(): ...
 
