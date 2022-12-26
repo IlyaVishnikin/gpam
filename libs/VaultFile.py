@@ -31,18 +31,13 @@ class VaultFile:
 			with open(self.path, "r") as f:
 				self.data = json.load(f)
 
-	def verify_master_key(self, password: str) -> bool:
-		try:
-			PasswordHasher().verify(self.data['master-key'], password)
-			return True
-		except:
-			return False
-
 	def add_fields(self, master_key: str, **kwargs) -> None:
 		if "login" not in kwargs or "site" not in kwargs:
 			return
 
 		if "password" in kwargs and self.data['master-key']:
+			PasswordHasher().verify(self.data["master-key"], master_key)
+
 			# encrypt password with master key
 			key = PBKDF2(master_key, b"{self.data['master-key']}", dkLen=32, count=10**6)
 			cipher = AES.new(key, AES.MODE_CBC)
