@@ -16,9 +16,9 @@ class ConfigurationFile:
 					"vaults": []
 				}
 			}
-			self.save(
+			self.save()
 		else:
-			self.data = {}
+				self.data = {}
 
 		self.vaults = self.data["config"]["vaults"] if self.data else {}
 		self.default_vault = self.data["config"]["default-vault"] if self.data else {}
