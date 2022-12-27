@@ -9,17 +9,19 @@ class ConfigurationFile:
 		try:
 			with open(self.path, "r") as json_file:
 				self.data = json.load(json_file)
-		except:
+		except FileNotFoundError:
 			self.data = {
 				"config": {
 					"default-vault": "",
 					"vaults": []
 				}
 			}
-			self.save()
+			self.save(
+		else:
+			self.data = {}
 
-		self.vaults = self.data["config"]["vaults"]
-		self.default_vault = self.data["config"]["default-vault"]
+		self.vaults = self.data["config"]["vaults"] if self.data else {}
+		self.default_vault = self.data["config"]["default-vault"] if self.data else {}
 
 	def save(self) -> None:
 		with open(self.path, "w") as json_file:
