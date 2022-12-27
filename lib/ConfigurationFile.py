@@ -17,8 +17,8 @@ class ConfigurationFile:
 				}
 			}
 			self.save()
-		else:
-				self.data = {}
+		except json.decoder.JSONDecodeError:
+			self.data = {}
 
 		self.vaults = self.data["config"]["vaults"] if self.data else {}
 		self.default_vault = self.data["config"]["default-vault"] if self.data else {}
