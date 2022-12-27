@@ -1,5 +1,8 @@
 import click
 
+import config
+
+from pathlib import Path
 
 @click.group()
 def gpam(): ...
@@ -17,4 +20,5 @@ def new(vault, login, site, password, field):
 	...
 
 if __name__ == "__main__":
+	Path(config.GPAM_HOME_DIR).mkdir(mode=0o777, parents=True, exist_ok=True)
 	gpam()
