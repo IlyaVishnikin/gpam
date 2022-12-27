@@ -23,6 +23,20 @@ class ConfigurationFile:
 		self.vaults = self.data["config"]["vaults"] if self.data else {}
 		self.default_vault = self.data["config"]["default-vault"] if self.data else {}
 
+	def add_vault(self, vault_name: str, path: str, master_key: str = "") -> None:
+		if not vault_name:
+			raise ValueError("The vault name shouldn't be empty")
+
+		for vautl in self.vaults:
+			if vault_name in vault["names"]:
+				return
+
+		self.vaults.append({
+			"names": [vault_name],
+			"path": path,
+		})
+		self.default_vault = self.data["config"]["default-vault"] = vault_name
+
 	def save(self) -> None:
 		with open(self.path, "w") as json_file:
 			json.dump(self.data, json_file, indent=4)
