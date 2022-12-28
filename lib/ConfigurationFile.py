@@ -43,6 +43,16 @@ class ConfigurationFile:
 			vault_names.append(*vault["names"])
 		return vault_names
 
+	def get_vault_path(self, name) -> str:
+		if not name:
+			return ""
+
+		for vault in self.vaults:
+			if name in vault["names"]:
+				return vault["path"]
+
+		return ""
+
 	def save(self) -> None:
 		with open(self.path, "w") as json_file:
 			json.dump(self.data, json_file, indent=4)
