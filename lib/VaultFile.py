@@ -3,6 +3,7 @@ import json
 from base64 import b64encode
 from Crypto.Random import get_random_bytes
 from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 
 
 class VaultFile:
@@ -15,6 +16,7 @@ class VaultFile:
 		try:
 			with open(self.path, "r") as json_file:
 				self.data = json.load(json_file)
+			PasswordHasher().verify(self.data["master-key"], self.master_key)
 		except FileNotFoundError:
 			self.data = {
 				"salt": b64encode(get_random_bytes(128)).decode(),
@@ -22,8 +24,9 @@ class VaultFile:
 				"records": []
 			}
 			self.save()
-		except json.decoder.JSONDecodeError:
+		except (json.decoder.JSONDecodeError, VerifyMismatchError):
 			self.data = {}
+
 
 	def save(self):
 		with open(self.path, "w") as json_file:
