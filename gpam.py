@@ -83,19 +83,13 @@ def new(vault, login, site, password, field, master_key, interactive):
 		if not site:
 			sys.exit(config.EXIT_SUCCESS)
 
-	site = site if site else click.prompt("Site")
-	login = login if login else click.prompt("Login")
-	if not password:
-		password = pwinput("Password: ")
-
-	fields = {
-		"site": site,
-		"login": login,
-		"password": password
-	}
-	if field:
-		for k, v in field:
-			fields[k] = v
+	fields = { k: v for k, v in field }
+	if "site" not in fields:
+		fields["site"] = site if site else click.prompt("Site")
+	if "login" not in fields:
+		fields["login"] = login if login else click.prompt("Login")
+	if "password" not in fields:
+		fields["password"] = password if password else pwinput("Password: ")
 
 if __name__ == "__main__":
 	Path(config.GPAM_HOME_DIR).mkdir(mode=0o777, parents=True, exist_ok=True)
