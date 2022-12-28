@@ -67,6 +67,7 @@ def new(vault, login, site, password, field, master_key, interactive):
 		click.echo(f"GPAM: {click.style('New vault has been initialized', fg='green')}")
 		if not site:
 			sys.exit(config.EXIT_SUCCESS)
+		vault_file = VaultFile(config_file.get_vault_path(vault), master_key)
 
 	if not vault:
 		vault = config_file.default_vault
@@ -82,7 +83,8 @@ def new(vault, login, site, password, field, master_key, interactive):
 
 		if not site:
 			sys.exit(config.EXIT_SUCCESS)
-
+		vault_file = VaultFile(config_file.get_vault_path(vault), master_key)
+	
 	fields = { k: v for k, v in field }
 	if "site" not in fields:
 		fields["site"] = site if site else click.prompt("Site")
@@ -90,6 +92,25 @@ def new(vault, login, site, password, field, master_key, interactive):
 		fields["login"] = login if login else click.prompt("Login")
 	if "password" not in fields:
 		fields["password"] = password if password else pwinput("Password: ")
+
+	vault_path = config_file.get_vault_path(vault)
+	if not vault_path:
+		error_message = click.style("Path for the vault is not set")
+		click.echo(f"GPAM: {error_message}: {vault}", file=click.get_text_stream("stderr"))
+		sys.exit(EXIT_FAILURE)
+
+	if not vault_file:
+		if not master_key:
+			master_key = pwinput("Master key: ")
+			if master_key != pwinput("Repeat master key: "):
+				click.echo(f"GPAM: {click.style('Master key confirmation failed', fg='red')}", file=click.get_text_stream("stderr"))
+				sys.exit(config.EXIT_FAILURE)
+		vault_file = VaultFile(vault_path, master_key)
+
+	if not vault_file.data:
+		click.echo(f"GPAM: {click.style('Vault file has been damaged or master key incorrect', fg='red')}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+
 
 if __name__ == "__main__":
 	Path(config.GPAM_HOME_DIR).mkdir(mode=0o777, parents=True, exist_ok=True)
