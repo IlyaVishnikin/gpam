@@ -27,7 +27,7 @@ class ConfigurationFile:
 		if not vault_name:
 			raise ValueError("The vault name shouldn't be empty")
 
-		for vautl in self.vaults:
+		for vault in self.vaults:
 			if vault_name in vault["names"]:
 				return
 
@@ -36,6 +36,12 @@ class ConfigurationFile:
 			"path": path,
 		})
 		self.default_vault = self.data["config"]["default-vault"] = vault_name
+
+	def get_all_vault_names(self) -> [str]:
+		vault_names = []
+		for vault in self.vaults:
+			vault_names.append(*vault["names"])
+		return vault_names
 
 	def save(self) -> None:
 		with open(self.path, "w") as json_file:
