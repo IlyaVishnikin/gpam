@@ -1,4 +1,5 @@
 import json
+from copy import copy
 
 from base64 import b64encode, b64decode
 from Crypto.Random import get_random_bytes
@@ -53,7 +54,7 @@ class VaultFile:
 	def encrypt_password(self, password) -> str:
 		key = PBKDF2(self.master_key, self.data["salt"].encode('ascii'), dkLen=32, count=10**6)
 		aes = AES.new(key, AES.MODE_CBC)
-		ciphered_password = aes.encrypt(pad(fields["password"].encode('ascii'), AES.block_size))
+		ciphered_password = aes.encrypt(pad(password.encode('ascii'), AES.block_size))
 		aes_iv = aes.iv
 		return b64encode(aes_iv + ciphered_password).decode()
 
@@ -64,6 +65,18 @@ class VaultFile:
 		cipher = AES.new(key, AES.MODE_CBC, iv=aes_iv)
 		plain_password = unpad(cipher.decrypt(ciphered_password), AES.block_size)
 		return plain_password.decode("utf-8")
+
+	def update_master_key(self, master_key):
+		for record in self.data["records"]:
+			if "password" in record:
+				decrypted_password = self.decrypt_password(record["password"])
+				master_key_copy = copy(self.master_key)
+				self.master_key = master_key
+				record["password"] = self.encrypt_password(decrypted_password)
+				self.master_key = master_key_copy
+
+		self.master_key = master_key
+		self.data["master-key"] = "" if not master_key else PasswordHasher().hash(self.master_key)
 
 	def save(self):
 		with open(self.path, "w") as json_file:
