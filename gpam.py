@@ -1,11 +1,17 @@
-import click
 import sys
+import click
 
 import config
 
 from pathlib import Path
 from os.path import join
+
 from pwinput import pwinput
+
+from rich.console import Console
+from rich.table import Table
+from rich.tree import Tree
+
 from lib.ConfigurationFile import ConfigurationFile
 from lib.VaultFile import VaultFile
 
@@ -85,7 +91,6 @@ def new(vault, login, site, password, field, master_key, path, interactive):
 			sys.exit(config.EXIT_SUCCESS)
 		vault_file = VaultFile(path, master_key)
 		config_file.read()
-	
 
 	fields = { k: v for k, v in field }
 	if "site" not in fields:
@@ -97,9 +102,9 @@ def new(vault, login, site, password, field, master_key, path, interactive):
 
 	path = path if path else config_file.get_vault_path(vault)
 	if not path:
-		error_message = click.style("Path for the vault is not set")
+		error_message = click.style("Path for the vault is not set", fg="red")
 		click.echo(f"GPAM: {error_message}: {vault}", file=click.get_text_stream("stderr"))
-		sys.exit(EXIT_FAILURE)
+		sys.exit(config.EXIT_FAILURE)
 
 	if not vault_file:
 		if not master_key:
@@ -116,6 +121,56 @@ def new(vault, login, site, password, field, master_key, path, interactive):
 	vault_file.add_record(**fields)
 	vault_file.save()
 	config_file.save()
+
+@gpam.command()
+@click.argument("vault", default="", type=str)
+@click.option("--master-key", "-m", type=str, help="Master key")
+def show(vault, master_key):
+	config_file = ConfigurationFile(config.CONFIG_FILE_PATH)
+	if not config_file.data:
+		click.echo(f"GPAM: {click.style('Configuration file has been damaged.', fg='red')}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+
+	if not vault:
+		all_vaults = config_file.get_all_vault_names()
+		if not all_vaults:
+			click.echo("No available vaults")
+			sys.exit(config.EXIT_SUCCESS)
+
+		table = Table(title="GPAM Vaults Information")
+		table.add_column("Name")
+		table.add_column("Path")
+		for name in all_vaults:
+			table.add_row(name, config_file.get_vault_path(name) or "<Not set>")
+		Console().print(table)
+		sys.exit(config.EXIT_SUCCESS)
+
+	vault_path = config_file.get_vault_path(vault)
+	if not vault_path:
+		error_message = click.style("Path for the vault is not set", fg="red")
+		click.echo(f"GPAM: {error_message}: {vault}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+
+	if not master_key:
+		master_key = pwinput("Master key: ")
+		if master_key != pwinput("Repeat master key: "):
+			click.echo(f"GPAM: {click.style('Master key confirmation failed', fg='red')}", file=click.get_text_stream("stderr"))
+			sys.exit(config.EXIT_FAILURE)
+
+	vault_file = VaultFile(vault_path, master_key)
+	if not vault_file.data:
+		click.echo(f"GPAM: {click.style('Vault file has been damaged or master key incorrect', fg='red')}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+
+	tree = Tree(vault)
+	for record in vault_file.data["records"]:
+		tree_site = tree.add(record["site"])
+		for k in record:
+			if k == "site":
+				continue
+			tree_site.add(f"{k}: {vault_file.decrypt_password(record['password']) if k == 'password' else record[k]}")
+
+	Console().print(tree)
 
 
 if __name__ == "__main__":
