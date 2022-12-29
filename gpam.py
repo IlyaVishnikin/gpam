@@ -39,7 +39,6 @@ def gpam_create_new_vault(name: str = "", master_key: str = "", path: str = "") 
 
 	vault_file.save()
 	config_file.save()
-
 	return [name, master_key, path]
 
 
@@ -71,6 +70,7 @@ def new(vault, login, site, password, field, master_key, path, interactive):
 		if not site:
 			sys.exit(config.EXIT_SUCCESS)
 		vault_file = VaultFile(path, master_key)
+		config_file.read()
 	elif not vault:
 		vault = config_file.default_vault
 		click.echo(f"GPAM: Used default vault: \"{vault}\"")
@@ -84,6 +84,7 @@ def new(vault, login, site, password, field, master_key, path, interactive):
 		if not site:
 			sys.exit(config.EXIT_SUCCESS)
 		vault_file = VaultFile(path, master_key)
+		config_file.read()
 	
 
 	fields = { k: v for k, v in field }
@@ -94,7 +95,6 @@ def new(vault, login, site, password, field, master_key, path, interactive):
 	if "password" not in fields:
 		fields["password"] = password if password else pwinput("Password: ")
 
-	config_file.read()
 	path = path if path else config_file.get_vault_path(vault)
 	if not path:
 		error_message = click.style("Path for the vault is not set")
