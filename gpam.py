@@ -107,13 +107,15 @@ def new(vault, login, site, password, field, master_key, path, interactive):
 			if master_key != pwinput("Repeat master key: "):
 				click.echo(f"GPAM: {click.style('Master key confirmation failed', fg='red')}", file=click.get_text_stream("stderr"))
 				sys.exit(config.EXIT_FAILURE)
-		vault_file = VaultFile(vault_path, master_key)
+		vault_file = VaultFile(path, master_key)
 
 	if not vault_file.data:
 		click.echo(f"GPAM: {click.style('Vault file has been damaged or master key incorrect', fg='red')}", file=click.get_text_stream("stderr"))
 		sys.exit(config.EXIT_FAILURE)
 
 	vault_file.add_record(**fields)
+	vault_file.save()
+	config_file.save()
 
 
 if __name__ == "__main__":
