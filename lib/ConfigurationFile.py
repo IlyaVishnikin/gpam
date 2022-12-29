@@ -57,6 +57,18 @@ class ConfigurationFile:
 		with open(self.path, "r") as json_file:
 				self.data = json.load(json_file)
 
+	def update_vault_name(self, previos_name: str, new_name: str) -> None:
+		if not previos_name or not new_name:
+			return
+
+		for vault in self.vaults:
+			if previos_name in vault["names"]:
+				vault["names"].remove(previos_name)
+				vault["names"].append(new_name)
+				return
+
+		raise KeyError(f"Vault with the name {previos_name} is not exists")
+
 	def save(self) -> None:
 		with open(self.path, "w") as json_file:
 			json.dump(self.data, json_file, indent=4)
