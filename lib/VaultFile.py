@@ -1,6 +1,6 @@
 import json
 
-from base64 import b64encode
+from base64 import b64encode, b64decode
 from Crypto.Random import get_random_bytes
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Cipher import AES
@@ -40,7 +40,7 @@ class VaultFile:
 			aes = AES.new(key, AES.MODE_CBC)
 			ciphered_password = aes.encrypt(pad(fields["password"].encode('ascii'), AES.block_size))
 			aes_iv = aes.iv
-			fields["password"] = b64encode(key + aes_iv + ciphered_password).decode()
+			fields["password"] = b64encode(aes_iv + ciphered_password).decode()
 
 		record_root = None
 		for record in self.data["records"]:
@@ -53,6 +53,15 @@ class VaultFile:
 		for field_name in fields:
 			if field_name not in record_root:
 				record_root[field_name] = fields[field_name]
+
+	def decrypt_password(self, password) -> str:
+		password_bytes = b64decode(password)
+		key = PBKDF2(self.master_key, self.data["salt"].encode("ascii"), dkLen=32, count=10**6)
+		aes_iv, ciphered_password = password_bytes[:16], password_bytes[16:]
+		cipher = AES.new(key, AES.MODE_CBC, iv=aes_iv)
+		plain_password = unpad(cipher.decrypt(ciphered_password), AES.block_size)
+		return plain_password.decode("utf-8")
+
 
 	def save(self):
 		with open(self.path, "w") as json_file:
