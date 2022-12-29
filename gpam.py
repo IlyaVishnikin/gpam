@@ -31,7 +31,6 @@ def gpam_create_new_vault(name: str = "", master_key: str = "", path: str = "") 
 	else:
 		path = Path(path).resolve()
 
-
 	config_file.add_vault(name, str(path))
 	vault_file = VaultFile(str(path), master_key)
 	if not vault_file.data:
@@ -40,6 +39,9 @@ def gpam_create_new_vault(name: str = "", master_key: str = "", path: str = "") 
 
 	vault_file.save()
 	config_file.save()
+
+	return [name, master_key, path]
+
 
 @click.group()
 def gpam(): ...
@@ -52,8 +54,9 @@ def gpam(): ...
 @click.option("--password", "-p", type=str, help="New password")
 @click.option("--field", "-f", type=(str, str), default=[], multiple=True, help="Custome field")
 @click.option("--master-key", "-m", type=str, help="Master key")
+@click.option("--path", "-P", type=str, help="Path to the vault")
 @click.option("--interactive", "-i", is_flag=True, help="Interactive input of fields")
-def new(vault, login, site, password, field, master_key, interactive):
+def new(vault, login, site, password, field, master_key, path, interactive):
 	config_file = ConfigurationFile(config.CONFIG_FILE_PATH)
 	if not config_file.data:
 		click.echo(f"GPAM: {click.style('Configuration file has been damaged.', fg='red')}", file=click.get_text_stream("stderr"))
@@ -63,13 +66,12 @@ def new(vault, login, site, password, field, master_key, interactive):
 
 	if not config_file.vaults:
 		click.echo(f"GPAM: {click.style('No one vault initialized yet', fg='yellow')}")
-		gpam_create_new_vault(vault, master_key)
+		vault, master_key, path = gpam_create_new_vault(vault, master_key, path)
 		click.echo(f"GPAM: {click.style('New vault has been initialized', fg='green')}")
 		if not site:
 			sys.exit(config.EXIT_SUCCESS)
-		vault_file = VaultFile(config_file.get_vault_path(vault), master_key)
-
-	if not vault:
+		vault_file = VaultFile(path, master_key)
+	elif not vault:
 		vault = config_file.default_vault
 		click.echo(f"GPAM: Used default vault: \"{vault}\"")
 	elif vault not in config_file.get_all_vault_names():
@@ -77,14 +79,13 @@ def new(vault, login, site, password, field, master_key, interactive):
 		if not is_create:
 			click.echo(f"GPAM: {click.style('Aborted by user', fg='red')}", file=click.get_text_stream("stderr"))
 			sys.exit(config.EXIT_SUCCESS)
-
-		gpam_create_new_vault(vault, master_key)
+		vault, master_key, path = gpam_create_new_vault(vault, master_key, path)
 		click.echo(f"GPAM: {click.style('New vault has been initialized', fg='green')}")
-
 		if not site:
 			sys.exit(config.EXIT_SUCCESS)
-		vault_file = VaultFile(config_file.get_vault_path(vault), master_key)
+		vault_file = VaultFile(path, master_key)
 	
+
 	fields = { k: v for k, v in field }
 	if "site" not in fields:
 		fields["site"] = site if site else click.prompt("Site")
@@ -93,8 +94,9 @@ def new(vault, login, site, password, field, master_key, interactive):
 	if "password" not in fields:
 		fields["password"] = password if password else pwinput("Password: ")
 
-	vault_path = config_file.get_vault_path(vault)
-	if not vault_path:
+	config_file.read()
+	path = path if path else config_file.get_vault_path(vault)
+	if not path:
 		error_message = click.style("Path for the vault is not set")
 		click.echo(f"GPAM: {error_message}: {vault}", file=click.get_text_stream("stderr"))
 		sys.exit(EXIT_FAILURE)
@@ -110,6 +112,8 @@ def new(vault, login, site, password, field, master_key, interactive):
 	if not vault_file.data:
 		click.echo(f"GPAM: {click.style('Vault file has been damaged or master key incorrect', fg='red')}", file=click.get_text_stream("stderr"))
 		sys.exit(config.EXIT_FAILURE)
+
+	vault_file.add_record(**fields)
 
 
 if __name__ == "__main__":
