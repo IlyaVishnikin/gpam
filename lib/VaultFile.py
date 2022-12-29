@@ -36,11 +36,7 @@ class VaultFile:
 			raise ValueError("Record fields is not specified")
 
 		if "password" in fields:
-			key = PBKDF2(self.master_key, self.data["salt"].encode('ascii'), dkLen=32, count=10**6)
-			aes = AES.new(key, AES.MODE_CBC)
-			ciphered_password = aes.encrypt(pad(fields["password"].encode('ascii'), AES.block_size))
-			aes_iv = aes.iv
-			fields["password"] = b64encode(aes_iv + ciphered_password).decode()
+			fields["password"] = self.encrypt_password(fields["password"])
 
 		record_root = None
 		for record in self.data["records"]:
@@ -54,6 +50,13 @@ class VaultFile:
 			if field_name not in record_root:
 				record_root[field_name] = fields[field_name]
 
+	def encrypt_password(self, password) -> str:
+		key = PBKDF2(self.master_key, self.data["salt"].encode('ascii'), dkLen=32, count=10**6)
+		aes = AES.new(key, AES.MODE_CBC)
+		ciphered_password = aes.encrypt(pad(fields["password"].encode('ascii'), AES.block_size))
+		aes_iv = aes.iv
+		return b64encode(aes_iv + ciphered_password).decode()
+
 	def decrypt_password(self, password) -> str:
 		password_bytes = b64decode(password)
 		key = PBKDF2(self.master_key, self.data["salt"].encode("ascii"), dkLen=32, count=10**6)
@@ -61,7 +64,6 @@ class VaultFile:
 		cipher = AES.new(key, AES.MODE_CBC, iv=aes_iv)
 		plain_password = unpad(cipher.decrypt(ciphered_password), AES.block_size)
 		return plain_password.decode("utf-8")
-
 
 	def save(self):
 		with open(self.path, "w") as json_file:
