@@ -7,8 +7,7 @@ class ConfigurationFile:
 	def __init__(self, path: str):
 		self.path = path
 		try:
-			with open(self.path, "r") as json_file:
-				self.data = json.load(json_file)
+			self.read()
 		except FileNotFoundError:
 			self.data = {
 				"config": {
@@ -52,6 +51,11 @@ class ConfigurationFile:
 				return vault["path"]
 
 		return ""
+
+	def read(self):
+		self.data = {}
+		with open(self.path, "r") as json_file:
+				self.data = json.load(json_file)
 
 	def save(self) -> None:
 		with open(self.path, "w") as json_file:
