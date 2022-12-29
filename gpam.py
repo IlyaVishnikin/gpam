@@ -172,6 +172,48 @@ def show(vault, master_key):
 
 	Console().print(tree)
 
+@gpam.command()
+@click.option("--vault", "-v", type=str, multiple=True)
+@click.option("--master-key", "-m", type=str, multiple=True)
+@click.option("--site", "-s", type=str, multiple=True)
+@click.option("--login", "-l", type=str, multiple=True)
+@click.option("--password", "-p", type=str, multiple=True)
+@click.option("--field", "-f", type=(str, str))
+def update(vault, master_key, site, login, password, field):
+	config_file = ConfigurationFile(config.CONFIG_FILE_PATH)
+	if not config_file.data:
+		click.echo(f"GPAM: {click.style('Configuration file has been damaged.', fg='red')}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+
+	if len(vault) >= 2 and vault[0] != vault[1]:
+		try:
+			config_file.update_vault_name(vault[0], vault[-1])
+		except KeyError:
+			click.echo(f"GPAM: {click.style('Vault with the specified name is not exists', fg='red')}: {vault[0]}", file=click.get_text_stream("stderr"))
+			sys.exit(config.EXIT_FAILURE)
+		config_file.save()
+		if not site:
+			sys.exit(config.EXIT_SUCCESS)
+
+	if len(master_key) >= 2 and master_key[0] != master_key[1]:
+		if not vault:
+			vault = (click.prompt("Vault"), )
+		vault_path = config_file.get_vault_path(vault[0])
+		if not vault_path:
+			click.echo(f"GPAM: {click.style('Path for the vault is not set', fg='red')}: {vault}", file=click.get_text_stream("stderr"))
+			sys.exit(config.EXIT_FAILURE)
+
+		vault_file = VaultFile(vault_path, master_key[0])
+		if not vault_file.data:
+			click.echo(f"GPAM: {click.style('Vault file has been damaged or master key incorrect', fg='red')}", file=click.get_text_stream("stderr"))
+			sys.exit(config.EXIT_FAILURE)
+
+		if master_key[-1]:
+			vault_file.update_master_key(master_key[-1])
+		vault_file.save()
+		if not site:
+			sys.exit(config.EXIT_SUCCESS)
+
 
 if __name__ == "__main__":
 	Path(config.GPAM_HOME_DIR).mkdir(mode=0o777, parents=True, exist_ok=True)
