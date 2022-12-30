@@ -47,6 +47,25 @@ def gpam_create_new_vault(name: str = "", master_key: str = "", path: str = "") 
 	config_file.save()
 	return [name, master_key, path]
 
+def ask_vault_path(vault_name: str = "") -> str:
+	config_file = ConfigurationFile(config.CONFIG_FILE_PATH)
+	if not config_file:
+		click.echo(f"GPAM: {click.style('Configuration file has been damaged.', fg='red')}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+
+	vault_name = vault_name if vault_name else click.prompt("Vault")
+	vault_path = config_file.get_vault_path(vault_name)
+	if not vault_path:
+		click.echo(f"GPAM: {click.style('Path for the vault is not set', fg='red')}: {vault_name}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+	return vault_path
+
+def ask_master_key(confirm: bool = True) -> str:
+	master_key = pwinput("Master key: ")
+	if confirm and master_key != pwinput("Repeat master key: "):
+		click.echo(f"GPAM: {click.style('Master key confirmation failed', fg='red')}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+	return master_key
 
 @click.group()
 def gpam(): ...
@@ -178,41 +197,65 @@ def show(vault, master_key):
 @click.option("--site", "-s", type=str, multiple=True)
 @click.option("--login", "-l", type=str, multiple=True)
 @click.option("--password", "-p", type=str, multiple=True)
-@click.option("--field", "-f", type=(str, str))
+@click.option("--field", "-f", type=(str, str), multiple=True)
 def update(vault, master_key, site, login, password, field):
 	config_file = ConfigurationFile(config.CONFIG_FILE_PATH)
 	if not config_file.data:
 		click.echo(f"GPAM: {click.style('Configuration file has been damaged.', fg='red')}", file=click.get_text_stream("stderr"))
 		sys.exit(config.EXIT_FAILURE)
+	vault_file = None
 
-	if len(vault) >= 2 and vault[0] != vault[1]:
-		try:
-			config_file.update_vault_name(vault[0], vault[-1])
-		except KeyError:
-			click.echo(f"GPAM: {click.style('Vault with the specified name is not exists', fg='red')}: {vault[0]}", file=click.get_text_stream("stderr"))
-			sys.exit(config.EXIT_FAILURE)
-		config_file.save()
-		if not site:
-			sys.exit(config.EXIT_SUCCESS)
+	if login or password or field:
+		fields = { f[0]: f[1] for f in field }
+		
+		site = site if site else (click.prompt("Site"), )
+		fields["site"] = site[-1] if len(site) >= 2 else site[0]
 
-	if len(master_key) >= 2 and master_key[0] != master_key[1]:
-		if not vault:
-			vault = (click.prompt("Vault"), )
-		vault_path = config_file.get_vault_path(vault[0])
-		if not vault_path:
-			click.echo(f"GPAM: {click.style('Path for the vault is not set', fg='red')}: {vault}", file=click.get_text_stream("stderr"))
-			sys.exit(config.EXIT_FAILURE)
+		login = login if login else (click.prompt("Login"), )
+		fields["login"] = login[-1] if len(login) >= 2 else login[0]
 
+		if len(password) >= 2 and password[0] != password[-1]:
+			fields["password"] = password[-1]
+
+		vault_path = ask_vault_path(vault[0] if vault else "")
+		master_key = master_key if master_key else (ask_master_key(confirm=False), )
 		vault_file = VaultFile(vault_path, master_key[0])
 		if not vault_file.data:
 			click.echo(f"GPAM: {click.style('Vault file has been damaged or master key incorrect', fg='red')}", file=click.get_text_stream("stderr"))
 			sys.exit(config.EXIT_FAILURE)
-
-		if master_key[-1]:
-			vault_file.update_master_key(master_key[-1])
+		print(fields)
+		vault_file.update_record(site[0], login[0], fields)
 		vault_file.save()
-		if not site:
-			sys.exit(config.EXIT_SUCCESS)
+
+	if len(site) >= 2 and site[0] != site[-1]:
+		if not vault_file:
+			vault_path = ask_vault_path(vault[0] if vault else "")
+			master_key = master_key if master_key else (ask_master_key(confirm=False), )
+			vault_file = VaultFile(vault_path, master_key[0])
+			if not vault_file.data:
+				click.echo(f"GPAM: {click.style('Vault file has been damaged or master key incorrect', fg='red')}", file=click.get_text_stream("stderr"))
+				sys.exit(config.EXIT_FAILURE)
+
+		if not login and click.confirm("Update all records?", default=False):
+			vault_file.update_all_sites(site[0], site[-1])
+		else:
+			login = click.prompt("Login")
+			vault_file.update_record(site[0], login, { "site": site[-1] })
+		vault_file.save()
+
+	if len(master_key) >= 2 and master_key[0] != master_key[-1]:
+		if not vault_file:
+			vault_path = ask_vault_path(vault[0] if vault else "")
+			vault_file = VaultFile(vault_path, master_key[0])
+			if not vault_file.data:
+				click.echo(f"GPAM: {click.style('Vault file has been damaged or master key incorrect', fg='red')}", file=click.get_text_stream("stderr"))
+				sys.exit(config.EXIT_FAILURE)
+		vault_file.update_master_key(master_key[1])
+		vault_file.save()
+
+	if len(vault) >= 2 and vault[0] != vault[-1]:
+		config_file.update_vault_name(vault[0], vault[-1])
+		config_file.save()
 
 
 if __name__ == "__main__":
