@@ -64,6 +64,14 @@ class VaultFile:
 					continue
 				record[k] = v
 
+	def delete_record(self, site: str, login: str) -> None:
+		if not site or not login:
+			return
+
+		for record in self.data["records"]:
+			if record.get("site") == site and record.get("login") == login:
+				self.data["records"].remove(record)
+
 	def update_all_sites(self, previos: str, new: str) -> None:
 		for record in self.data["records"]:
 			if record["site"] == previos:
@@ -85,6 +93,11 @@ class VaultFile:
 
 		self.master_key = master_key
 		self.data["master-key"] = "" if not master_key else PasswordHasher().hash(self.master_key)
+
+	def delete_all_sites(self, site):
+		for record in self.data["records"]:
+			if record.get("site") == site:
+				self.data["records"].remove(record)
 
 	def encrypt_password(self, password) -> str:
 		key = PBKDF2(self.master_key, self.data["salt"].encode('ascii'), dkLen=32, count=10**6)
