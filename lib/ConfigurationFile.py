@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 class ConfigurationFile:
 	"""
@@ -27,7 +28,7 @@ class ConfigurationFile:
 			raise ValueError("The vault name shouldn't be empty")
 
 		for vault in self.vaults:
-			if vault_name in vault["names"]:
+			if vault_name in vault.get("names"):
 				return
 
 		self.vaults.append({
@@ -35,6 +36,17 @@ class ConfigurationFile:
 			"path": path,
 		})
 		self.default_vault = self.data["config"]["default-vault"] = vault_name
+
+	def delete_vault(self, name: str) -> None:
+		if not name or name not in self.get_all_vault_names():
+			return
+
+		for vault in self.vaults:
+			if name not in vault.get("names"):
+				continue
+
+			Path(vault["path"]).unlink(missing_ok=True)
+			self.vaults.remove(vault)
 
 	def get_all_vault_names(self) -> [str]:
 		vault_names = []
@@ -52,11 +64,6 @@ class ConfigurationFile:
 
 		return ""
 
-	def read(self):
-		self.data = {}
-		with open(self.path, "r") as json_file:
-				self.data = json.load(json_file)
-
 	def update_vault_name(self, previos_name: str, new_name: str) -> None:
 		if not previos_name or not new_name:
 			return
@@ -66,6 +73,12 @@ class ConfigurationFile:
 				vault["names"].remove(previos_name)
 				vault["names"].append(new_name)
 				return
+		raise KeyError(f"Vault with the name {previos_name} is not exists")
+
+	def read(self):
+		self.data = {}
+		with open(self.path, "r") as json_file:
+				self.data = json.load(json_file)
 
 	def save(self) -> None:
 		with open(self.path, "w") as json_file:
