@@ -1,4 +1,5 @@
 import json
+import typing
 from copy import copy
 
 from base64 import b64encode, b64decode
@@ -51,6 +52,40 @@ class VaultFile:
 			if field_name not in record_root:
 				record_root[field_name] = fields[field_name]
 
+	def update_record(self, site: str, login: str, new: typing.Dict[str, str]) -> None:
+		for record in self.data["records"]:
+			if record.get("site") != site or record.get("login") != login:
+				continue
+			for k, v in new.items():
+				if k == "password" and self.decrypt_password(record[k]) != v:
+					record[k] = self.encrypt_password(v)
+					continue
+				if record.get(k) == v:
+					continue
+				record[k] = v
+
+	def update_all_sites(self, previos: str, new: str) -> None:
+		for record in self.data["records"]:
+			if record["site"] == previos:
+				record["site"] = new
+
+	def update_master_key(self, master_key):
+		if master_key == self.master_key:
+			return
+
+		for record in self.data["records"]:
+			if "password" not in record:
+				continue
+
+			plain_password = self.decrypt_password(record["password"])
+			master_key_copy = copy(self.master_key)
+			self.master_key = master_key
+			record["password"] = self.encrypt_password(plain_password)
+			self.master_key = master_key_copy
+
+		self.master_key = master_key
+		self.data["master-key"] = "" if not master_key else PasswordHasher().hash(self.master_key)
+
 	def encrypt_password(self, password) -> str:
 		key = PBKDF2(self.master_key, self.data["salt"].encode('ascii'), dkLen=32, count=10**6)
 		aes = AES.new(key, AES.MODE_CBC)
@@ -65,18 +100,6 @@ class VaultFile:
 		cipher = AES.new(key, AES.MODE_CBC, iv=aes_iv)
 		plain_password = unpad(cipher.decrypt(ciphered_password), AES.block_size)
 		return plain_password.decode("utf-8")
-
-	def update_master_key(self, master_key):
-		for record in self.data["records"]:
-			if "password" in record:
-				decrypted_password = self.decrypt_password(record["password"])
-				master_key_copy = copy(self.master_key)
-				self.master_key = master_key
-				record["password"] = self.encrypt_password(decrypted_password)
-				self.master_key = master_key_copy
-
-		self.master_key = master_key
-		self.data["master-key"] = "" if not master_key else PasswordHasher().hash(self.master_key)
 
 	def save(self):
 		with open(self.path, "w") as json_file:
