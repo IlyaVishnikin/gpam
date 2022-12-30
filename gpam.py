@@ -67,6 +67,7 @@ def ask_master_key(confirm: bool = True) -> str:
 		sys.exit(config.EXIT_FAILURE)
 	return master_key
 
+
 @click.group()
 def gpam(): ...
 
@@ -257,6 +258,36 @@ def update(vault, master_key, site, login, password, field):
 		config_file.update_vault_name(vault[0], vault[-1])
 		config_file.save()
 
+@gpam.command()
+@click.argument("vault", type=str)
+@click.argument("site", type=str, required=False)
+@click.argument("login", type=str, required=False)
+@click.option("--master-key", "-m", type=str)
+def delete(vault, site, login, master_key):
+	config_file = ConfigurationFile(config.CONFIG_FILE_PATH)
+	if not config_file.data:
+		click.echo(f"GPAM: {click.style('Configuration file has been damaged.', fg='red')}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+
+	if not vault in config_file.get_all_vault_names():
+			click.echo(f"GPAM: {click.style('Vault with specified name not exists', fg='red')}: {vault}", file=click.get_text_stream("stderr"))
+			sys.exit(config.EXIT_FAILURE)	
+
+	master_key = master_key if master_key else ask_master_key(confirm=False)
+	vault_file = VaultFile(config_file.get_vault_path(vault), master_key)
+	if not vault_file.data:
+		click.echo(f"GPAM: {click.style('Vault file has been damaged or master key incorrect', fg='red')}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+
+	if login or site:
+		vault_file.delete_record(site, login)
+	elif site:
+		 vault_file.delete_all_sites(site)
+	elif vault:
+		config_file.delete_vault(vault)
+
+	vault_file.save()
+	config_file.save()
 
 if __name__ == "__main__":
 	Path(config.GPAM_HOME_DIR).mkdir(mode=0o777, parents=True, exist_ok=True)
