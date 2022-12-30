@@ -67,8 +67,6 @@ class ConfigurationFile:
 				vault["names"].append(new_name)
 				return
 
-		raise KeyError(f"Vault with the name {previos_name} is not exists")
-
 	def save(self) -> None:
 		with open(self.path, "w") as json_file:
 			json.dump(self.data, json_file, indent=4)
