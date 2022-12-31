@@ -1,7 +1,8 @@
 import sys
 import click
 import config
-import lib.crypto as crypto
+import string
+import random
 
 from pathlib import Path
 from os.path import join
@@ -11,9 +12,10 @@ from rich.table import Table
 from rich.tree import Tree
 from lib.ConfigurationFile import ConfigurationFile
 from lib.VaultFile import VaultFile
+from zxcvbn import zxcvbn
 
 
-def gpam_create_new_vault(name: str = "", master_key: str = "", path: str = "") -> None:
+def create_new_vault(name: str = "", master_key: str = "", path: str = "") -> None:
 	config_file = ConfigurationFile(config.CONFIG_FILE_PATH)
 	if not config_file.data:
 		click.echo(f"GPAM: {click.style('Configuration file has been damaged.', fg='red')}", file=click.get_text_stream("stderr"))
@@ -88,7 +90,7 @@ def new(vault, login, site, password, field, master_key, path, interactive, gene
 
 	if not config_file.vaults:
 		click.echo(f"GPAM: {click.style('No one vault initialized yet', fg='yellow')}")
-		vault, master_key, path = gpam_create_new_vault(vault, master_key, path)
+		vault, master_key, path = create_new_vault(vault, master_key, path)
 		click.echo(f"GPAM: {click.style('New vault has been initialized', fg='green')}")
 		if not site:
 			sys.exit(config.EXIT_SUCCESS)
@@ -102,7 +104,7 @@ def new(vault, login, site, password, field, master_key, path, interactive, gene
 		if not is_create:
 			click.echo(f"GPAM: {click.style('Aborted by user', fg='red')}", file=click.get_text_stream("stderr"))
 			sys.exit(config.EXIT_SUCCESS)
-		vault, master_key, path = gpam_create_new_vault(vault, master_key, path)
+		vault, master_key, path = create_new_vault(vault, master_key, path)
 		click.echo(f"GPAM: {click.style('New vault has been initialized', fg='green')}")
 		if not site:
 			sys.exit(config.EXIT_SUCCESS)
@@ -115,7 +117,13 @@ def new(vault, login, site, password, field, master_key, path, interactive, gene
 	if "login" not in fields:
 		fields["login"] = login if login else click.prompt("Login")
 	if "password" not in fields:
-		fields["password"] = password or (generate_password and crypto.generate_password(15)) or pwinput("Password: ")
+		if password:
+			fields["password"] = password
+		elif generate_password:
+			alphabet = string.ascii_letters + string.digits + string.punctuation
+			fields["password"] = ''.join(random.choices(alphabet, k=30))
+		else:
+			fields["password"] = pwinput("Password: ")
 
 	path = path if path else ask_vault_path(vault)
 	if not vault_file:
@@ -276,6 +284,48 @@ def delete(vault, site, login, master_key):
 
 	vault_file.save()
 	config_file.save()
+
+@gpam.command()
+@click.argument("vault", type=str)
+@click.argument("site", type=str, required=False)
+@click.argument("login", type=str, required=False)
+@click.option("--master-key", "-m", type=str)
+def analyse(vault, site, login, master_key):
+	config_file = ConfigurationFile(config.CONFIG_FILE_PATH)
+	if not config_file.data:
+		click.echo(f"GPAM: {click.style('Configuration file has been damaged.', fg='red')}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+
+	if not vault in config_file.get_all_vault_names():
+			click.echo(f"GPAM: {click.style('Vault with specified name not exists', fg='red')}: {vault}", file=click.get_text_stream("stderr"))
+			sys.exit(config.EXIT_FAILURE)	
+
+	master_key = master_key if master_key else ask_master_key(confirm=False)
+	vault_file = VaultFile(config_file.get_vault_path(vault), master_key)
+	if not vault_file.data:
+		click.echo(f"GPAM: {click.style('Vault file has been damaged or master key incorrect', fg='red')}", file=click.get_text_stream("stderr"))
+		sys.exit(config.EXIT_FAILURE)
+
+	analysis_table = Table(title="GPAM Passwords Analyse")
+	analysis_table.add_column("Site")
+	analysis_table.add_column("Login")
+	analysis_table.add_column("Level")
+
+	for password in vault_file.get_all_passwords():
+		if (site and password[0] != site) or (login and password[1] != login):
+			continue
+		
+		score = zxcvbn(password[2])["score"]
+		if 0 <= score < 2:
+			score = "[red]Low[/red]"
+		elif score == 2:
+			score = "[yellow]Medium[/yellow]"
+		elif 3 <= score <= 5:
+			score = "[green]High[/green]"
+		analysis_table.add_row(password[0], password[1],  score)
+	
+	Console().print(analysis_table)
+
 
 if __name__ == "__main__":
 	Path(config.GPAM_HOME_DIR).mkdir(mode=0o777, parents=True, exist_ok=True)
