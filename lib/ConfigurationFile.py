@@ -48,6 +48,9 @@ class ConfigurationFile:
 			Path(vault["path"]).unlink(missing_ok=True)
 			self.vaults.remove(vault)
 
+		if self.default_vault == name:
+			self.default_vault = ""
+
 	def get_all_vault_names(self) -> [str]:
 		vault_names = []
 		for vault in self.vaults:
