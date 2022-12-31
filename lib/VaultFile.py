@@ -11,7 +11,6 @@ from Crypto.Util.Padding import pad, unpad
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
-
 class VaultFile:
 	"""
 	"""
@@ -71,6 +70,16 @@ class VaultFile:
 		for record in self.data["records"]:
 			if record.get("site") == site and record.get("login") == login:
 				self.data["records"].remove(record)
+
+	def get_all_passwords(self) -> typing.List[typing.Tuple[str, str, str]]:
+		all_passwords = []
+		for record in self.data["records"]:
+			all_passwords.append((
+				record.get("site"),
+				record.get("login"),
+				self.decrypt_password(record.get("password"))
+			))
+		return all_passwords
 
 	def update_all_sites(self, previos: str, new: str) -> None:
 		for record in self.data["records"]:
