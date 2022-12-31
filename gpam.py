@@ -1,19 +1,17 @@
 import sys
 import click
-
 import config
+import lib.crypto as crypto
 
 from pathlib import Path
 from os.path import join
-
 from pwinput import pwinput
-
 from rich.console import Console
 from rich.table import Table
 from rich.tree import Tree
-
 from lib.ConfigurationFile import ConfigurationFile
 from lib.VaultFile import VaultFile
+
 
 def gpam_create_new_vault(name: str = "", master_key: str = "", path: str = "") -> None:
 	config_file = ConfigurationFile(config.CONFIG_FILE_PATH)
@@ -71,7 +69,6 @@ def ask_master_key(confirm: bool = True) -> str:
 @click.group()
 def gpam(): ...
 
-
 @gpam.command()
 @click.option("--vault", "-v", type=str, help="Vault name(if not set than uses default vault)")
 @click.option("--login", "-l", type=str, help="New login name")
@@ -81,12 +78,12 @@ def gpam(): ...
 @click.option("--master-key", "-m", type=str, help="Master key")
 @click.option("--path", "-P", type=str, help="Path to the vault")
 @click.option("--interactive", "-i", is_flag=True, help="Interactive input of fields")
-def new(vault, login, site, password, field, master_key, path, interactive):
+@click.option("--generate-password", "-g", is_flag=True, help="Generate password")
+def new(vault, login, site, password, field, master_key, path, interactive, generate_password):
 	config_file = ConfigurationFile(config.CONFIG_FILE_PATH)
 	if not config_file.data:
 		click.echo(f"GPAM: {click.style('Configuration file has been damaged.', fg='red')}", file=click.get_text_stream("stderr"))
 		sys.exit(config.EXIT_FAILURE)
-
 	vault_file = None
 
 	if not config_file.vaults:
@@ -118,20 +115,11 @@ def new(vault, login, site, password, field, master_key, path, interactive):
 	if "login" not in fields:
 		fields["login"] = login if login else click.prompt("Login")
 	if "password" not in fields:
-		fields["password"] = password if password else pwinput("Password: ")
+		fields["password"] = password or (generate_password and crypto.generate_password(15)) or pwinput("Password: ")
 
-	path = path if path else config_file.get_vault_path(vault)
-	if not path:
-		error_message = click.style("Path for the vault is not set", fg="red")
-		click.echo(f"GPAM: {error_message}: {vault}", file=click.get_text_stream("stderr"))
-		sys.exit(config.EXIT_FAILURE)
-
+	path = path if path else ask_vault_path(vault)
 	if not vault_file:
-		if not master_key:
-			master_key = pwinput("Master key: ")
-			if master_key != pwinput("Repeat master key: "):
-				click.echo(f"GPAM: {click.style('Master key confirmation failed', fg='red')}", file=click.get_text_stream("stderr"))
-				sys.exit(config.EXIT_FAILURE)
+		master_key = master_key if master_key else ask_master_key(confirm=False)
 		vault_file = VaultFile(path, master_key)
 
 	if not vault_file.data:
